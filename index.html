@@ -605,8 +605,10 @@
               if (lightsaberMesh.grabIndex !== -1) {
                 const gamepads = navigator.getGamepads();
                 const gamepad = gamepads[lightsaberMesh.grabIndex];
-                const triggered = gamepad.buttons[1].pressed;
-                lightsaberMesh.ignited = triggered;
+                if (gamepad) {
+                  const triggered = gamepad.buttons[1].pressed;
+                  lightsaberMesh.ignited = triggered;
+                }
               } else {
                 lightsaberMesh.ignited = false;
               }
