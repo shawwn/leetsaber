@@ -560,7 +560,7 @@
 
           for (let i = 0; i < gamepads.length; i++) {
             const gamepad = gamepads[i];
-            if (gamepad) {
+            if (gamepad && gamepad.pose && gamepad.pose.position && controllerMeshes) {
               const controllerMesh = controllerMeshes[i];
               controllerMesh.position.fromArray(gamepad.pose.position);
               controllerMesh.quaternion.fromArray(gamepad.pose.orientation);
@@ -867,7 +867,6 @@
 
 				renderer.setSize(window.innerWidth, window.innerHeight);
       });
-      //window.addEventListener('keypress', activate);
       const _activate = e => {
         const display = displays.find(display =>
           display.constructor.name === 'VRDisplay'
@@ -884,6 +883,7 @@
             });
         }
       }
+      window.addEventListener('keypress', _activate);
       setTimeout(_activate, 1000);
 		</script>
 
