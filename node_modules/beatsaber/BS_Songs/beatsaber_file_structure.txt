@@ -1,0 +1,38 @@
+beat saber file structure : 
+
+the beat saber beatmap format is a simple one line JSON file.
+
+Map properties :
+
+version : format version
+beatsPerMinute : describe itself
+beatsPerBar : unknown (does nothing for me, if you find what it does please tell me)
+noteJumpSpeed : unknown
+shuffle : unknown
+shufflePeriod : unknown
+
+Event :
+
+time : Event time position in beats
+type : Event type ()
+value : Event value ()
+
+Note :
+
+time : Note time position in beats
+lineIndex : Note horizontal position (0 to 3, start from left)
+lineLayer : Note vertical position (0 to 2, start from bottom)
+type : Note type (0 = red, 1 = blue, 3 = bomb)
+cutDirection : Note cut direction (0 = up, 1 = down, 2 = left, 3 = right, 4 = up left, 5 = up right, 6 = down left, 7 = down right, 8 = no direction)
+
+Obstacle :
+
+time : Obstacle time position in beats
+lineIndex : Obstacle horizontal position (0 to 3, start from left)
+type : Obstacle type (0 = wall, 1 = ceiling)
+duration : Obstacle length in beats
+width : Obstacle width in lines (extend to the right)
+
+-- Written by @ikeiwa on Beat Saber Mod Group discord
+
+https://discord.gg/VBDAFH3

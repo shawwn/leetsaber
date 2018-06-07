@@ -1,47 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js webgl - lightsaber combat demo</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				background:#000;
-				color:#fff;
-				padding:0;
-				margin:0;
-				font-weight: bold;
-				overflow:hidden;
-			}
+<head>
+	<title>three.js webgl - lightsaber combat demo</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+			background:#000;
+			color:#fff;
+			padding:0;
+			margin:0;
+			font-weight: bold;
+			overflow:hidden;
+		}
 
-			a {	color: #ffffff;	}
+		a {	color: #ffffff;	}
 
-			#info {
-				position: absolute;
-				top: 0px; width: 100%;
-				color: #ffffff;
-				padding: 5px;
-				font-family:Monospace;
-				font-size:10px;
-				text-align:center;
-			}
+		#info {
+			position: absolute;
+			top: 0px; width: 100%;
+			color: #ffffff;
+			padding: 5px;
+			font-family:Monospace;
+			font-size:10px;
+			text-align:center;
+		}
 
-			#oldie {
-				background:rgb(200,100,0) !important;
-				color:#fff;
-			}
+		#oldie {
+			background:rgb(200,100,0) !important;
+			color:#fff;
+		}
 
-			#vt { display:none }
-			#vt, #vt a { color:orange; }
-		</style>
-	</head>
+		#vt { display:none }
+		#vt, #vt a { color:orange; }
+	</style>
+</head>
 
-	<body>
+<body>
+  <audio src="escape.ogg" id="escape"></audio>
     <canvas id=canvas></canvas>
-		<script src="three.js"></script>
+    <script>delete navigator.xr;</script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/93/three.js"></script>-->
+	<script src="three.js"></script>
+	<!--<script src="threejs.2.js"></script>-->
     <script src="OBJLoader.js"></script>
     <script src="SkyShader.js"></script>
-		<script>
+	<script>
       const FLOOR_SIZE = 20;
       const NUM_POSITIONS_CHUNK = 150 * 1024;
       const GRAB_DISTANCE = 210.1;
@@ -61,7 +65,8 @@
       const localQuaternion = new THREE.Quaternion();
       const localQuaternion2 = new THREE.Quaternion();
 
-      const camera = new THREE.PerspectiveCamera( 90, window.innerWidth / window.innerHeight, 0.1, 10 * 1024 );
+      camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10 * 1024 );
+      camera2 = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10 * 1024 );
       camera.position.y = 0.1;
       camera.position.z = 1;
 
@@ -79,7 +84,7 @@
       renderer.vr.enabled = true;
 
       const container = document.createElement( 'div' );
-			document.body.appendChild( container );
+		document.body.appendChild( container );
       container.appendChild(renderer.domElement);
 
       const ambientLight = new THREE.AmbientLight(0x808080);
@@ -548,7 +553,7 @@
       const velocity = new THREE.Vector3();
       let lastTime = Date.now();
       let lastBulletTime = lastTime;
-			function render() {
+		function render() {
         const currentTime = Date.now();
         const timePassed = Math.max(currentTime - lastTime, 1);
 
@@ -607,10 +612,10 @@
                 const gamepad = gamepads[lightsaberMesh.grabIndex];
                 if (gamepad) {
                   const triggered = gamepad.buttons[1].pressed;
-                  lightsaberMesh.ignited = triggered;
+                  if (triggered) {
+                    lightsaberMesh.ignited = triggered;
+                  }
                 }
-              } else {
-                lightsaberMesh.ignited = false;
               }
             }
           }
@@ -833,16 +838,21 @@
         _updateBullets();
         _updateIntersection();
 
-				renderer.render(scene, camera);
+        renderer.clear(true, true, true);
+			renderer.render(scene, camera, null, true);
 
         lastTime = currentTime;
-			}
+		}
 
-      function animate() {
-				requestAnimationFrame(animate);
-				render();
-			}
-			animate();
+function animate() {
+  renderer.vr.enabled = false;
+  camera.position.set(0,1,0);
+  camera.quaternion.set(0,0,0,1);
+  camera.updateMatrixWorld(true);
+  render();
+  window.requestAnimationFrame(animate);
+}
+//animate();
 
       let displays = [];
       if (navigator.getVRDisplays) {
@@ -862,12 +872,13 @@
 
       window.addEventListener('resize', e => {
         camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+        camera.updateProjectionMatrix();
 
-				renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight);
       });
       window.addEventListener('keypress', e => {
-        if (e.keyCode === 112) { // F1
+        //if (e.keyCode === 112) { // F1
+          document.getElementById('escape').play();
           const display = displays.find(display =>
             display.constructor.name === 'VRDisplay'
           );
@@ -877,8 +888,14 @@
             }])
               .then(() => {
                 renderer.vr.setDevice(display);
+                renderer.animate(() => {
+                  renderer.vr.enabled = true;
+                  render();
+                });
+
               });
           }
+        /*
         } else if (e.keyCode === 113) { // F2
           const display = displays.find(display =>
             display.constructor.name === 'MLDisplay'
@@ -892,8 +909,9 @@
               });
           }
         }
+        */
       });
-		</script>
+	</script>
 
-	</body>
+</body>
 </html>
