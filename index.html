@@ -37,6 +37,7 @@
 	</head>
 
 	<body>
+    <audio id="song" src="https://files.webmr.io/_files/shawnpresser@gmail.com/escape/escape.ogg"></audio>
     <canvas id=canvas></canvas>
     <script>delete navigator.xr;</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/93/three.js"></script>
@@ -878,6 +879,7 @@
             .then(() => {
               renderer.vr.setDevice(display);
               renderer.vr.enabled = true;
+              document.getElementById('song').play();
               renderer.animate(animate);
             });
         }
