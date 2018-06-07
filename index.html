@@ -38,7 +38,9 @@
 
 	<body>
     <canvas id=canvas></canvas>
-		<script src="three.js"></script>
+    <script>delete navigator.xr;</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/93/three.js"></script>
+		<!--<script src="three.js"></script>-->
     <script src="OBJLoader.js"></script>
     <script src="SkyShader.js"></script>
 		<script>
@@ -561,7 +563,7 @@
               const controllerMesh = controllerMeshes[i];
               controllerMesh.position.fromArray(gamepad.pose.position);
               controllerMesh.quaternion.fromArray(gamepad.pose.orientation);
-              controllerMesh.updateMatrixWorld();
+              controllerMesh.updateMatrixWorld(true);
             }
           }
         };
@@ -839,10 +841,8 @@
 			}
 
       function animate() {
-				requestAnimationFrame(animate);
 				render();
 			}
-			animate();
 
       let displays = [];
       if (navigator.getVRDisplays) {
@@ -866,33 +866,23 @@
 
 				renderer.setSize(window.innerWidth, window.innerHeight);
       });
-      window.addEventListener('keypress', e => {
-        if (e.keyCode === 112) { // F1
-          const display = displays.find(display =>
-            display.constructor.name === 'VRDisplay'
-          );
-          if (display) {
-            display.requestPresent([{
-              source: canvas,
-            }])
-              .then(() => {
-                renderer.vr.setDevice(display);
-              });
-          }
-        } else if (e.keyCode === 113) { // F2
-          const display = displays.find(display =>
-            display.constructor.name === 'MLDisplay'
-          );
-          if (display) {
-            display.requestPresent([{source: canvas}])
-              .then(() => {
-                renderer.vr.setDevice(display);
-
-                scene.remove(sky.mesh);
-              });
-          }
+      //window.addEventListener('keypress', activate);
+      const _activate = e => {
+        const display = displays.find(display =>
+          display.constructor.name === 'VRDisplay'
+        );
+        if (display) {
+          display.requestPresent([{
+            source: canvas,
+          }])
+            .then(() => {
+              renderer.vr.setDevice(display);
+              renderer.vr.enabled = true;
+              renderer.animate(animate);
+            });
         }
-      });
+      }
+      setTimeout(_activate, 1000);
 		</script>
 
 	</body>
