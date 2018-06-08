@@ -37,14 +37,23 @@
 	</head>
 
 	<body>
+    <div style="width: 100%; height: 100%">
+      <canvas id="canvas" style="width: 100%; height: 100%"></canvas>
+    </div>
     <audio id="song" src="https://files.webmr.io/_files/shawnpresser@gmail.com/escape/escape.ogg"></audio>
-    <canvas id=canvas></canvas>
-    <script>delete navigator.xr;</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/93/three.js"></script>
 		<!--<script src="three.js"></script>-->
     <script src="OBJLoader.js"></script>
     <script src="SkyShader.js"></script>
-		<script>
+<script>
+class PhysicalMesh extends THREE.Mesh {
+  constructor() {
+    super(...arguments);
+    this.castShadow = true;
+    this.receiveShadow = true;
+  }
+};
+THREE.PhysicalMesh = PhysicalMesh;
       const FLOOR_SIZE = 20;
       const NUM_POSITIONS_CHUNK = 150 * 1024;
       const GRAB_DISTANCE = 210.1;
@@ -63,50 +72,76 @@
       const localVector2 = new THREE.Vector3();
       const localQuaternion = new THREE.Quaternion();
       const localQuaternion2 = new THREE.Quaternion();
+      const localMatrix = new THREE.Matrix4();
+      const standingMatrix = new THREE.Matrix4();
+      const standingPosition = new THREE.Vector3();
+      const standingQuaternion = new THREE.Quaternion();
+      const standingScale = new THREE.Vector3();
 
       const camera = new THREE.PerspectiveCamera( 90, window.innerWidth / window.innerHeight, 0.1, 10 * 1024 );
       camera.position.y = 0.1;
       camera.position.z = 1;
 
       const scene = new THREE.Scene();
+      //scene.background = new THREE.Color(0,0.2,0.4);
 
-      const cancvas = document.getElementById('canvas');
-      canvas.width = innerWidth;
-      canvas.height = innerHeight;
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-      });
+      const frameData = new VRFrameData();
+      const renderer = new THREE.WebGLRenderer({canvas});
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
       renderer.setPixelRatio( window.devicePixelRatio );
       renderer.setSize( window.innerWidth, window.innerHeight );
       renderer.sortObjects = false;
-      renderer.vr.enabled = true;
+      renderer.vr.enabled = false;
 
-      const container = document.createElement( 'div' );
-			document.body.appendChild( container );
-      container.appendChild(renderer.domElement);
+      //const container = document.createElement( 'div' );
+      //container.width = window.innerWidth;
+      //container.height = window.innerHeight;
+			//document.body.appendChild( container );
+      //container.appendChild(renderer.domElement);
+      renderer.domElement.width = window.innerWidth;
+      renderer.domElement.height = window.innerHeight;
 
-      const ambientLight = new THREE.AmbientLight(0x808080);
+      const ambientLight = new THREE.AmbientLight(0x202020);
       scene.add(ambientLight);
 
-      const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
-      directionalLight.position.set(1, 1, 1);
-      scene.add(directionalLight);
+      let directionalLight;
+      {
+        const light = new THREE.DirectionalLight(0xBFCFFF, 1.5, 100);
+        light.position.set(10, 10, 10);
+        light.castShadow = true;
+
+        //Set up shadow properties for the light
+        light.shadow.mapSize.width = 2048;  // default
+        light.shadow.mapSize.height = 2048; // default
+        light.shadow.camera.near = 0.5;    // default
+        light.shadow.camera.far = 500;     // default
+
+        directionalLight = light;
+        scene.add(light);
+
+        //Create a helper for the shadow camera (optional)
+        helper = new THREE.CameraHelper( light.shadow.camera );
+        scene.add( helper );
+      }
 
       let lightsaberMeshes = [null, null];
 
       const controllerMeshes = [null, null];
       for (let i = 0; i < controllerMeshes.length; i++) {
         const controllerMesh = new THREE.Object3D();
+        controllerMeshes[i] = controllerMesh;
         controllerMesh.position.set(i === 0 ? -0.1 : 0.1, 0, 0);
+        /*
         controllerMesh.quaternion.setFromUnitVectors(
           new THREE.Vector3(0, 0, -1),
           new THREE.Vector3(0, -1, -1)
         );
+        */
 
         controllerMesh.lastGrabbed = false;
 
-        scene.add(controllerMesh);
-        controllerMeshes[i] = controllerMesh;
+        //scene.add(controllerMesh);
       }
 
       const controllerMeshLoader = new THREE.OBJLoader();
@@ -116,11 +151,67 @@
         textureLoader.setPath('vive-controller/');
 
         const controllerMesh = object.children[0];
-        controllerMesh.material.map = textureLoader.load('onepointfive_texture.png');
-        controllerMesh.material.specularMap = textureLoader.load('onepointfive_spec.png');
+        if (controllerMesh) {
+          controllerMesh.material.map = textureLoader.load('onepointfive_texture.png');
+          controllerMesh.material.specularMap = textureLoader.load('onepointfive_spec.png');
 
-        controllerMeshes[0].add(object.clone());
-        controllerMeshes[1].add(object.clone());
+          controllerMeshes[0].add(object.clone());
+          controllerMeshes[1].add(object.clone());
+        } else {
+          console.error('controller mesh failed to load!');
+        }
+      });
+
+      const noteMeshes = [null, null];
+      for (let i = 0; i < noteMeshes.length; i++) {
+        const noteMesh = new THREE.Object3D();
+        noteMeshes[i] = noteMesh;
+        noteMesh.position.set(i === 0 ? -0.3 : 0.3, 1, 1);
+        noteMesh.scale.set(0.05,0.05,0.05);
+        noteMesh.quaternion.setFromUnitVectors(
+          new THREE.Vector3(-1, 0, 0),
+          new THREE.Vector3(0, 0, 1)
+        );
+
+        noteMesh.lastGrabbed = false;
+
+        scene.add(noteMesh);
+      }
+
+      const noteMeshLoader = new THREE.OBJLoader();
+      noteMeshLoader.setPath('note/');
+      noteMeshLoader.load('note.obj', object => {
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.setPath('note/');
+
+        const glowMesh = object.children[0];
+        const noteMesh = object.children[1];
+        if (noteMesh && glowMesh) {
+          glowMesh.scale.set(0.05,0.05,0.05);
+          glowMesh.material.emissive = new THREE.Color(1,0,0);
+          glowMesh.material.emissiveMap = textureLoader.load('SM_block_M_bloc_Glow_BaseColor.png');
+          glowMesh.material.emissiveIntensity = 0.5;
+          glowMesh.material.normalMap = textureLoader.load('SM_block_M_bloc_Glow_Normal.png');
+          let tex = textureLoader.load('SM_block_M_bloc_Glow_OcclusionRoughnessMetallic.png')
+          glowMesh.material.roughnessMap = tex;
+          glowMesh.material.aoMap = tex;
+          glowMesh.castShadow = true;
+          glowMesh.receiveShadow = true;
+
+          noteMesh.scale.set(0.05,0.05,0.05);
+          noteMesh.material.map = textureLoader.load('SM_block_M_bloc_Inst_BaseColor.png');
+          noteMesh.material.normalMap = textureLoader.load('SM_block_M_bloc_Inst_Normal.png');
+          tex = textureLoader.load('SM_block_M_bloc_Inst_OcclusionRoughnessMetallic.png')
+          noteMesh.material.roughnessMap = tex;
+          noteMesh.material.aoMap = tex;
+          noteMesh.castShadow = true;
+          noteMesh.receiveShadow = true;
+
+          noteMeshes[0].add(object.clone());
+          noteMeshes[1].add(object.clone());
+        } else {
+          console.error('note mesh failed to load!');
+        }
       });
 
       const sky = (() => {
@@ -140,8 +231,8 @@
       scene.add(sky.mesh);
 
       const _updateSunIntensity = () => {
-        const DAY_NIGHT_SPEED = 100;
-        const sunDistance = 5000;
+        const DAY_NIGHT_SPEED = 1000;
+        const sunDistance = 50;
         const cutoffAngle = Math.PI/1.95;
         const steepness = 1.5;
 
@@ -150,10 +241,14 @@
         const phi = 2 * Math.PI * (sky.azimuth - 0.5);
 
         const x = sunDistance * Math.cos(phi);
-        const y = sunDistance * Math.sin(phi) * Math.sin(theta);
+        const y = Math.abs(sunDistance * Math.sin(phi) * Math.sin(theta)) + 30.5;
         const z = sunDistance * Math.sin(phi) * Math.cos(theta);
 
         sky.uniforms.sunPosition.value.set(x, y, z);
+        directionalLight.position.set(x, y, z);
+        directionalLight.shadow.camera.position.set(x, y, z);
+        helper.position.set(x, y, z);
+        helper.updateMatrixWorld(true);
       };
       _updateSunIntensity();
 
@@ -189,16 +284,20 @@
               1
             );
             texture.needsUpdate = true;
-            const material = new THREE.MeshBasicMaterial({
+            const material = new THREE.MeshStandardMaterial({
               map: texture,
+              roughness: 1.0,
               side: THREE.DoubleSide,
             });
             const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = false;
+            mesh.receiveShadow = true;
             return mesh;
           })();
           scene.add(floorMesh);
         };
         graphImg.onerror = err => {
+          console.log('here');
           console.warn(err.stack);
         };
       })();
@@ -367,7 +466,7 @@
             const geometry = _makeImageDataGeometry(img.width, img.height, pixelSize, new THREE.Matrix4(), imageDataData);
             geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, (pixelSize / 2) - (pixelSize * 0.15), 0));
             const material = pixelMaterial;
-            const itemMesh = new THREE.Mesh(geometry, material);
+            const itemMesh = new THREE.PhysicalMesh(geometry, material);
             itemMesh.position.set(pixelSize, 0, 0);
             itemMesh.quaternion.setFromAxisAngle(
               new THREE.Vector3(0, 0, 1),
@@ -384,7 +483,7 @@
                   .applyMatrix(new THREE.Matrix4().makeTranslation(0, (0.1 / 2) + 0.02 + (1 / 2), 0));
                 const material = bladeMaterial;
 
-                return new THREE.Mesh(geometry, material);
+                return new THREE.PhysicalMesh(geometry, material);
               })();
               object.add(coreMesh);
               object.coreMesh = coreMesh;
@@ -394,7 +493,7 @@
                   .applyMatrix(new THREE.Matrix4().makeTranslation(-(0.1 / 2) - (0.1 / 2), (0.1 / 2) + (0.02 / 2), 0));
                 const material = bladeMaterial;
 
-                return new THREE.Mesh(geometry, material);
+                return new THREE.PhysicalMesh(geometry, material);
               })();
               object.add(leftMesh);
               object.leftMesh = leftMesh;
@@ -404,7 +503,7 @@
                   .applyMatrix(new THREE.Matrix4().makeTranslation((0.1 / 2) + (0.1 / 2), (0.1 / 2) + (0.02 / 2), 0));
                 const material = bladeMaterial;
 
-                return new THREE.Mesh(geometry, material);
+                return new THREE.PhysicalMesh(geometry, material);
               })();
               object.add(rightMesh);
               object.rightMesh = rightMesh;
@@ -418,7 +517,7 @@
               const geometry = new THREE.BoxBufferGeometry(0.1, 1, 0.1);
               const material = whiteMaterial;
 
-              const mesh = new THREE.Mesh(geometry, material);
+              const mesh = new THREE.PhysicalMesh(geometry, material);
               mesh.position.set(0, (0.1 / 2) + 0.02 + (1 / 2), 0);
               mesh.visible = false;
               return mesh;
@@ -448,7 +547,7 @@
           });
           for (let i = 0; i < lightsaberMeshes.length; i++) {
             if (!lightsaberMeshes[i]) {
-              const bladeMaterial = new THREE.MeshBasicMaterial({
+              const bladeMaterial = new THREE.MeshStandardMaterial({
                 color: (i === 0) ? 0xF44336 : 0x2196F3,
                 flatShading: true,
               });
@@ -458,6 +557,7 @@
           }
         };
         img.onerror = err => {
+          console.log('there');
           console.warn(err.stack);
         };
       })();
@@ -474,7 +574,7 @@
             flatShading: true,
           });
 
-          const mesh = new THREE.Mesh(geometry, material);
+          const mesh = new THREE.PhysicalMesh(geometry, material);
           return mesh;
         })();
         object.add(coreMesh);
@@ -488,7 +588,7 @@
             flatShading: true,
           });
 
-          const mesh = new THREE.Mesh(geometry, material);
+          const mesh = new THREE.PhysicalMesh(geometry, material);
           mesh.position.z = 0.1 - 0.015;
           mesh.rotation.y = Math.PI;
           mesh.rotation.order = camera.rotation.order;
@@ -505,7 +605,7 @@
             flatShading: true,
           });
 
-          const mesh = new THREE.Mesh(geometry, material);
+          const mesh = new THREE.PhysicalMesh(geometry, material);
           mesh.position.z = 0.1 - 0.005;
           mesh.rotation.y = Math.PI;
           mesh.rotation.order = camera.rotation.order;
@@ -527,7 +627,7 @@
         const geometry = bulletGeometry;
         const material = bulletMaterial;
 
-        const mesh = new THREE.Mesh(geometry, material);
+        const mesh = new THREE.PhysicalMesh(geometry, material);
         mesh.startTime = Date.now();
         mesh.lastTime = mesh.lastTime;
         mesh.intersected = false;
@@ -548,10 +648,13 @@
       const bullets = [];
 
       const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
       const velocity = new THREE.Vector3();
+      const scale = new THREE.Vector3();
+scale.set(1,1,1);
       let lastTime = Date.now();
       let lastBulletTime = lastTime;
-			function render() {
+			function update() {
         const currentTime = Date.now();
         const timePassed = Math.max(currentTime - lastTime, 1);
 
@@ -562,9 +665,18 @@
             const gamepad = gamepads[i];
             if (gamepad && gamepad.pose && gamepad.pose.position && controllerMeshes) {
               const controllerMesh = controllerMeshes[i];
-              controllerMesh.position.fromArray(gamepad.pose.position);
-              controllerMesh.quaternion.fromArray(gamepad.pose.orientation);
-              controllerMesh.updateMatrixWorld(true);
+              if (controllerMesh) {
+                controllerMesh.position.fromArray(gamepad.pose.position);
+                controllerMesh.position.add(standingPosition);
+                controllerMesh.quaternion.fromArray(gamepad.pose.orientation);
+                //localMatrix.compose(position, quaternion, scale);
+                //localMatrix.makeTranslation(position
+                //localMatrix.multiply(standingMatrix);
+                //controllerMesh.matrixWorld.multiply(standingMatrix);
+                //controllerMesh.applyMatrix(localMatrix);
+                //controllerMesh.applyMatrix(localMatrix);
+                controllerMesh.updateMatrixWorld();
+              }
             }
           }
         };
@@ -588,12 +700,13 @@
                 const gamepad = gamepads[j];
                 if (gamepad && _controllerToLightsaber(j) == null) {
                   const controllerMesh = controllerMeshes[j];
-
-                  if (lightsaberMesh.grabIndex === -1) {
-                    const distance = controllerMesh.position.distanceTo(lightsaberMesh.position);
-                    if (distance < GRAB_DISTANCE) {
-                      lightsaberMesh.grabIndex = j;
-                      console.log(`lightsaberMesh[${i}].grabIndex = ${j}`);
+                  if (controllerMesh) {
+                    if (lightsaberMesh.grabIndex === -1) {
+                      const distance = controllerMesh.position.distanceTo(lightsaberMesh.position);
+                      if (distance < GRAB_DISTANCE) {
+                        lightsaberMesh.grabIndex = j;
+                        console.log(`lightsaberMesh[${i}].grabIndex = ${j}`);
+                      }
                     }
                   }
                 }
@@ -624,12 +737,17 @@
             if (lightsaberMesh) {
               if (lightsaberMesh.grabIndex !== -1) {
                 const controllerMesh = controllerMeshes[lightsaberMesh.grabIndex];
-                lightsaberMesh.position.copy(controllerMesh.position);
-                lightsaberMesh.quaternion
-                  .copy(controllerMesh.quaternion)
-                  .multiply(localTransformRotationQuaterion);
-                lightsaberMesh.scale.copy(controllerMesh.scale);
-                lightsaberMesh.updateMatrixWorld();
+                if (controllerMesh) {
+                  lightsaberMesh.position.copy(controllerMesh.position);
+                  lightsaberMesh.quaternion
+                    .copy(controllerMesh.quaternion)
+                    .multiply(localTransformRotationQuaterion);
+                    //.multiply(standingMatrix);
+                  lightsaberMesh.scale.copy(controllerMesh.scale);
+                  lightsaberMesh.updateMatrixWorld();
+                  //lightsaberMesh.applyMatrix(standingMatrix);
+                  //lightsaberMesh.updateMatrixWorld();
+                }
               }
 
               if (lightsaberMesh.ignited) {
@@ -713,7 +831,7 @@
               bullet.position.copy(position);
               bullet.quaternion.copy(rotation);
               bullet.scale.copy(scale);
-              scene.add(bullet);
+              //scene.add(bullet);
 
               bullet.updateMatrixWorld();
 
@@ -829,6 +947,7 @@
           }
         };
         _updateControllers();
+        _updateSunIntensity();
         _updateLightsaberGrab();
         _updateLightsaberIgnition();
         _updateLightsaberPosition();
@@ -836,14 +955,108 @@
         _updateBullets();
         _updateIntersection();
 
-				renderer.render(scene, camera);
-
         lastTime = currentTime;
 			}
 
-      function animate() {
-				render();
-			}
+
+      function _renderEye (viewMatrix, projectionMatrix, viewport) {
+        // Set the left or right eye half.
+        renderer.setViewport(viewport.x, viewport.y, viewport.w, viewport.h);
+
+        // Update the scene and camera matrices.
+        camera.projectionMatrix.fromArray(projectionMatrix);
+        //camera.matrixWorldInverse.fromArray(viewMatrix);
+        //camera.updateMatrix();
+        //localMatrix.fromArray(viewMatrix);
+        //localMatrix.getInverse(localMatrix);
+        //scene.matrix.fromArray(viewMatrix);
+        //localMatrix.multiply(standingMatrix);
+        //localMatrix.getInverse(localMatrix);
+        //scene.matrix.copy(localMatrix);
+        //scene.matrix.identity();
+
+        // Tell the scene to update (otherwise it will ignore the change of matrix).
+        //scene.updateMatrixWorld(true);
+        renderer.render(scene, camera);
+      }
+
+const leftEye = new THREE.Vector3();
+const rightEye = new THREE.Vector3();
+
+function animate() {
+  renderer.vr.enabled = false;
+  scene.matrixAutoUpdate = false;
+  renderer.autoClear = false;
+
+  activeDisplay = displays.find(display => display && display.isPresenting);
+  if (!activeDisplay) {
+    console.log('no active display');
+    window.requestAnimationFrame(animate);
+    return;
+  }
+  activeDisplay.getFrameData(frameData);
+  let pose = frameData.pose;
+  if (!pose || !pose.position && activeDisplay.getPose) {
+    pose = activeDisplay.getPose();
+  }
+  if (frameData && pose && pose.position) {
+    standingMatrix.fromArray(activeDisplay.stageParameters.sittingToStandingTransform);
+    standingMatrix.decompose(standingPosition, standingQuaternion, standingScale);
+
+    localMatrix.fromArray(frameData.leftViewMatrix);
+    localMatrix.getInverse(localMatrix);
+    leftEye.setFromMatrixPosition(localMatrix);
+    leftEye.add(standingPosition);
+
+    localMatrix.fromArray(frameData.rightViewMatrix);
+    localMatrix.getInverse(localMatrix);
+    rightEye.setFromMatrixPosition(localMatrix);
+    rightEye.add(standingPosition);
+
+
+    camera.position.fromArray(pose.position);
+    camera.quaternion.fromArray(pose.orientation);
+    camera.position.add(standingPosition);
+    camera.updateMatrix();
+    update();
+    const EYE_WIDTH = renderer.getSize().width * 0.5;
+    const EYE_HEIGHT = renderer.getSize().height;
+    renderer.clear();
+
+    // Left eye.
+    camera.position.copy(leftEye);
+    _renderEye(
+      frameData.leftViewMatrix,
+      frameData.leftProjectionMatrix,
+      {
+        x: 0,
+        y: 0,
+        w: EYE_WIDTH,
+        h: EYE_HEIGHT
+      });
+    renderer.clearDepth();
+
+    // Right eye.
+    camera.position.copy(rightEye);
+    _renderEye(
+      frameData.rightViewMatrix,
+      frameData.rightProjectionMatrix, {
+        x: EYE_WIDTH,
+        y: 0,
+        w: EYE_WIDTH,
+        h: EYE_HEIGHT
+      });
+    renderer.clearDepth();
+
+    activeDisplay.submitFrame();
+  } else {
+    console.log('no frame data or pose');
+    console.dir(activeDisplay);
+    console.dir(frameData);
+    console.dir(pose);
+  }
+  activeDisplay.requestAnimationFrame(animate);
+}
 
       let displays = [];
       if (navigator.getVRDisplays) {
@@ -851,13 +1064,16 @@
           .then(newDisplays => {
             displays = newDisplays;
 
-            const presentingDisplay = displays.find(display => display.isPresenting);
+            /*
+            const presentingDisplay = displays.find(display => display && display.isPresenting);
             if (presentingDisplay) {
               renderer.vr.setDevice(presentingDisplay);
             }
+            */
           })
           .catch(err => {
-            console.warn(err);
+            console.log('here');
+            console.warn(err.stack);
           });
       }
 
@@ -867,24 +1083,39 @@
 
 				renderer.setSize(window.innerWidth, window.innerHeight);
       });
-      const _activate = e => {
-        const display = displays.find(display =>
-          display.constructor.name === 'VRDisplay'
-        );
-        if (display) {
-          display.requestPresent([{
-            source: canvas,
-          }])
-            .then(() => {
-              renderer.vr.setDevice(display);
-              renderer.vr.enabled = true;
-              document.getElementById('song').play();
-              renderer.animate(animate);
-            });
-        }
-      }
+const _activate = e => {
+  const presentingDisplay = displays.find(display => display && display.isPresenting);
+  if (presentingDisplay) {
+    console.log('presenting');
+    renderer.vr.setDevice(presentingDisplay);
+  } else {
+    const display = displays.find(display =>
+      display.constructor.name === 'VRDisplay'
+    );
+    if (display) {
+      display.requestPresent([{
+        source: renderer.domElement
+      }])
+        .then(() => {
+          //document.getElementById('song').play();
+          renderer.vr.setDevice(display);
+          renderer.vr.enabled = true;
+          renderer.domElement.width = display.getEyeParameters('left').renderWidth*2;
+          renderer.domElement.height = display.getEyeParameters('left').renderHeight;
+          renderer.setSize(renderer.domElement.width, renderer.domElement.height);
+          //renderer.animate(animate);
+          //renderer.vr.setAnimationLoop(animate);
+          display.requestAnimationFrame(animate);
+        })
+        .catch((err) => {
+          console.log('asdf');
+          console.warn(err);
+        });
+    }
+  }
+}
       window.addEventListener('keypress', _activate);
-      setTimeout(_activate, 1000);
+      //setTimeout(_activate, 1000);
 		</script>
 
 	</body>

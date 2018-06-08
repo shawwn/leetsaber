@@ -1,0 +1,11 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v3.1.197435470)
+
+newmtl M_bloc_Glow
+kd 0.215861 0.215861 0.215861
+illum 1
+
+newmtl M_bloc_Inst
+kd 0.215861 0.215861 0.215861
+illum 1
+
