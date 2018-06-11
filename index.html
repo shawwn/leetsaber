@@ -201,6 +201,17 @@ THREE.PhysicalMesh = PhysicalMesh;
 		});
 
         scene.add(group);
+
+        return group;
+	  }
+
+	  function makeSong() {
+        const audio = document.createElement('audio');
+        audio.src = oggPath;
+        audio.style.display = 'none';
+        audio.preload = 'auto';
+        document.body.appendChild(audio);
+        return audio;
 	  }
 
       const noteMeshLoader = new THREE.OBJLoader();
@@ -244,8 +255,10 @@ THREE.PhysicalMesh = PhysicalMesh;
           //
           // let beat, lineLayer, lineIndex;
 
-          buildNotes(object, songData.difficultyLevels[0].song._notes);
+          const notesGroup = buildNotes(object, songData.difficultyLevels[0].song._notes);
 
+          const audioEl = makeSong('./Believer/song.ogg');
+		  
           // beat = 1;
           // lineLayer = 0;
           // lineIndex = 0;
