@@ -167,37 +167,59 @@ THREE.PhysicalMesh = PhysicalMesh;
         }
       });
 
-      function makeNote(noteModel, x, y, z) {
+      function makeNote(noteModel, x, y, z, up) {
         if (noteModel) {
           const noteClone = noteModel.clone();
           noteClone.position.set(x, y, z);
           noteClone.scale.set(0.05,0.05,0.05);
-          noteClone.quaternion.setFromUnitVectors(
-            new THREE.Vector3(-1, 0, 0),
-            new THREE.Vector3(0, 0, 1)
-          );
+          if (up) {
+            noteClone.quaternion.multiply(
+            new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0,1,0),
+              up)
+            );
+          }
+          noteClone.quaternion.multiply(
+            new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(-1, 0, 0),
+              new THREE.Vector3(0, 0, 1)
+            ));
 
           // scene.add(noteModel);
           return noteClone;
         }
       }
 
+      // cutDirection : Note cut direction (0 = up, 1 = down, 2 = left, 3 = right, 4 = up left, 5 = up right, 6 = down left, 7 = down right, 8 = no direction)
+      const CUT = [
+        new THREE.Vector3(0,1,0),
+        new THREE.Vector3(0,-1,0),
+        new THREE.Vector3(-1,0,0),
+        new THREE.Vector3( 1,0,0),
+        new THREE.Vector3(-1,1,0),
+        new THREE.Vector3( 1,1,0),
+        new THREE.Vector3(-1,-1,0),
+        new THREE.Vector3( 1,-1,0),
+        null
+      ]
+
       function buildNotes(redNote, blueNote, data) {
         const PLAYER_HEIGHT = 1.0;
         const PLAYER_ORIENTATION = -1.0;
         const NOTE_WIDTH = 0.6;
         const NOTE_HEIGHT = 1.0;
-        const NOTE_DEPTH = 1.0;
+        const NOTE_DEPTH = 2.0;
 
         const group = new THREE.Group();
 
         data.forEach((d) => {
           const note = makeNote(
             d._type === 0 ? redNote : (d._type === 1 ? blueNote : null),
-			d._lineIndex * NOTE_WIDTH,
-			PLAYER_HEIGHT + (d._lineLayer * NOTE_HEIGHT),
-			d._time * NOTE_DEPTH * PLAYER_ORIENTATION,
-		  );
+            d._lineIndex * NOTE_WIDTH,
+            PLAYER_HEIGHT + (d._lineLayer * NOTE_HEIGHT),
+            d._time * NOTE_DEPTH * PLAYER_ORIENTATION,
+            CUT[d._cutDirection]
+          );
           if (note) {
             group.add(note);
           }
