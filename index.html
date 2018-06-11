@@ -1058,6 +1058,18 @@ function animate() {
   activeDisplay.requestAnimationFrame(animate);
 }
 
+function animate2() {
+  renderer.vr.enabled = false;
+  scene.matrixAutoUpdate = false;
+  renderer.autoClear = false;
+  renderer.clear();
+  camera.updateMatrix();
+  update();
+  renderer.render(scene, camera);
+  window.requestAnimationFrame(animate2);
+}
+animate2();
+
       let displays = [];
       if (navigator.getVRDisplays) {
         navigator.getVRDisplays()
