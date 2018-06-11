@@ -162,20 +162,16 @@ THREE.PhysicalMesh = PhysicalMesh;
         }
       });
 
-      const noteMeshes = [null, null];
-      for (let i = 0; i < noteMeshes.length; i++) {
-        const noteMesh = new THREE.Object3D();
-        noteMeshes[i] = noteMesh;
-        noteMesh.position.set(i === 0 ? -0.3 : 0.3, 1, 1);
-        noteMesh.scale.set(0.05,0.05,0.05);
-        noteMesh.quaternion.setFromUnitVectors(
+      function makeNote(noteModel, x, y, z) {
+        noteModel = noteModel.clone();
+        noteModel.position.set(x, y, z);
+        noteModel.scale.set(0.05,0.05,0.05);
+        noteModel.quaternion.setFromUnitVectors(
           new THREE.Vector3(-1, 0, 0),
           new THREE.Vector3(0, 0, 1)
         );
 
-        noteMesh.lastGrabbed = false;
-
-        scene.add(noteMesh);
+        scene.add(noteModel);
       }
 
       const noteMeshLoader = new THREE.OBJLoader();
@@ -206,9 +202,39 @@ THREE.PhysicalMesh = PhysicalMesh;
           noteMesh.material.aoMap = tex;
           noteMesh.castShadow = true;
           noteMesh.receiveShadow = true;
+          
+          makeNote(object, -0.3, 1.0, 1.0);
+          makeNote(object,  0.3, 1.0, 1.0);
 
-          noteMeshes[0].add(object.clone());
-          noteMeshes[1].add(object.clone());
+          const PLAYER_HEIGHT = 1.0;
+          const PLAYER_ORIENTATION = -1.0;
+
+          const NOTE_WIDTH = 0.6;
+          const NOTE_HEIGHT = 1.0;
+          const NOTE_DEPTH = 1.0;
+
+          let beat, lineLayer, lineIndex;
+
+          beat = 1;
+          lineLayer = 0;
+          lineIndex = 0;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+          lineIndex = 1;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+          lineIndex = 2;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+          lineIndex = 3;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+
+          beat = 4;
+          lineIndex = 0;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+          lineIndex = 1;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+          lineIndex = 2;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+          lineIndex = 3;
+          makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
         } else {
           console.error('note mesh failed to load!');
         }
