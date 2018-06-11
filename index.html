@@ -168,19 +168,21 @@ THREE.PhysicalMesh = PhysicalMesh;
       });
 
       function makeNote(noteModel, x, y, z) {
-        const noteClone = noteModel.clone();
-        noteClone.position.set(x, y, z);
-        noteClone.scale.set(0.05,0.05,0.05);
-        noteClone.quaternion.setFromUnitVectors(
-          new THREE.Vector3(-1, 0, 0),
-          new THREE.Vector3(0, 0, 1)
-        );
+        if (noteModel) {
+          const noteClone = noteModel.clone();
+          noteClone.position.set(x, y, z);
+          noteClone.scale.set(0.05,0.05,0.05);
+          noteClone.quaternion.setFromUnitVectors(
+            new THREE.Vector3(-1, 0, 0),
+            new THREE.Vector3(0, 0, 1)
+          );
 
-        // scene.add(noteModel);
-		return noteClone;
+          // scene.add(noteModel);
+          return noteClone;
+        }
       }
 
-      function buildNotes(noteModel, data) {
+      function buildNotes(redNote, blueNote, data) {
         const PLAYER_HEIGHT = 1.0;
         const PLAYER_ORIENTATION = -1.0;
         const NOTE_WIDTH = 0.6;
@@ -191,13 +193,14 @@ THREE.PhysicalMesh = PhysicalMesh;
 
         data.forEach((d) => {
           const note = makeNote(
-            noteModel,
+            d._type === 0 ? redNote : (d._type === 1 ? blueNote : null),
 			d._lineIndex * NOTE_WIDTH,
 			PLAYER_HEIGHT + (d._lineLayer * NOTE_HEIGHT),
 			d._time * NOTE_DEPTH * PLAYER_ORIENTATION,
 		  );
-
-          group.add(note);
+          if (note) {
+            group.add(note);
+          }
 		});
 
         scene.add(group);
@@ -242,43 +245,21 @@ THREE.PhysicalMesh = PhysicalMesh;
           noteMesh.material.aoMap = tex;
           noteMesh.castShadow = true;
           noteMesh.receiveShadow = true;
-          
+
           makeNote(object, -0.3, 1.0, 1.0);
           makeNote(object,  0.3, 1.0, 1.0);
 
-          // const PLAYER_HEIGHT = 1.0;
-          // const PLAYER_ORIENTATION = -1.0;
-          //
-          // const NOTE_WIDTH = 0.6;
-          // const NOTE_HEIGHT = 1.0;
-          // const NOTE_DEPTH = 1.0;
-          //
-          // let beat, lineLayer, lineIndex;
+          const redNote = object.clone();
+          const blueNote = object.clone();
 
-          const notesGroup = buildNotes(object, songData.difficultyLevels[0].song._notes);
+          redNote.children[1].material = redNote.children[1].material.clone();
+          redNote.children[1].material.emissive = new THREE.Color(1,0,0);
+          blueNote.children[1].material.emissive = new THREE.Color(0,0,1);
 
+          const notesGroup = buildNotes(redNote, blueNote, songData.difficultyLevels[0].song._notes);
           const audioEl = makeSong('./Believer/song.ogg');
-		  
-          // beat = 1;
-          // lineLayer = 0;
-          // lineIndex = 0;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          // lineIndex = 1;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          // lineIndex = 2;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          // lineIndex = 3;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          //
-          // beat = 4;
-          // lineIndex = 0;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          // lineIndex = 1;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          // lineIndex = 2;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
-          // lineIndex = 3;
-          // makeNote(object, lineIndex*NOTE_WIDTH, PLAYER_HEIGHT + lineLayer*NOTE_HEIGHT, beat*NOTE_DEPTH*PLAYER_ORIENTATION);
+
+          audioEl.play();
         } else {
           console.error('note mesh failed to load!');
         }
