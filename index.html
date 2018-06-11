@@ -85,7 +85,11 @@ THREE.PhysicalMesh = PhysicalMesh;
       const scene = new THREE.Scene();
       //scene.background = new THREE.Color(0,0.2,0.4);
 
-      const frameData = new VRFrameData();
+      let frameData = undefined;
+      if (typeof VRFrameData != 'undefined') {
+        frameData = new VRFrameData();
+      }
+
       const renderer = new THREE.WebGLRenderer({canvas});
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
@@ -994,66 +998,69 @@ function animate() {
     window.requestAnimationFrame(animate);
     return;
   }
-  activeDisplay.getFrameData(frameData);
-  let pose = frameData.pose;
-  if (!pose || !pose.position && activeDisplay.getPose) {
-    pose = activeDisplay.getPose();
-  }
-  if (frameData && pose && pose.position) {
-    standingMatrix.fromArray(activeDisplay.stageParameters.sittingToStandingTransform);
-    standingMatrix.decompose(standingPosition, standingQuaternion, standingScale);
 
-    localMatrix.fromArray(frameData.leftViewMatrix);
-    localMatrix.getInverse(localMatrix);
-    leftEye.setFromMatrixPosition(localMatrix);
-    leftEye.add(standingPosition);
+  if (frameData) {
+    activeDisplay.getFrameData(frameData);
+    let pose = frameData.pose;
+    if (!pose || !pose.position && activeDisplay.getPose) {
+      pose = activeDisplay.getPose();
+    }
+    if (frameData && pose && pose.position) {
+      standingMatrix.fromArray(activeDisplay.stageParameters.sittingToStandingTransform);
+      standingMatrix.decompose(standingPosition, standingQuaternion, standingScale);
 
-    localMatrix.fromArray(frameData.rightViewMatrix);
-    localMatrix.getInverse(localMatrix);
-    rightEye.setFromMatrixPosition(localMatrix);
-    rightEye.add(standingPosition);
+      localMatrix.fromArray(frameData.leftViewMatrix);
+      localMatrix.getInverse(localMatrix);
+      leftEye.setFromMatrixPosition(localMatrix);
+      leftEye.add(standingPosition);
+
+      localMatrix.fromArray(frameData.rightViewMatrix);
+      localMatrix.getInverse(localMatrix);
+      rightEye.setFromMatrixPosition(localMatrix);
+      rightEye.add(standingPosition);
 
 
-    camera.position.fromArray(pose.position);
-    camera.quaternion.fromArray(pose.orientation);
-    camera.position.add(standingPosition);
-    camera.updateMatrix();
-    update();
-    const EYE_WIDTH = renderer.getSize().width * 0.5;
-    const EYE_HEIGHT = renderer.getSize().height;
-    renderer.clear();
+      camera.position.fromArray(pose.position);
+      camera.quaternion.fromArray(pose.orientation);
+      camera.position.add(standingPosition);
+      camera.updateMatrix();
+      update();
+      const EYE_WIDTH = renderer.getSize().width * 0.5;
+      const EYE_HEIGHT = renderer.getSize().height;
+      renderer.clear();
 
-    // Left eye.
-    camera.position.copy(leftEye);
-    _renderEye(
-      frameData.leftViewMatrix,
-      frameData.leftProjectionMatrix,
-      {
-        x: 0,
-        y: 0,
-        w: EYE_WIDTH,
-        h: EYE_HEIGHT
-      });
-    renderer.clearDepth();
+      // Left eye.
+      camera.position.copy(leftEye);
+      _renderEye(
+        frameData.leftViewMatrix,
+        frameData.leftProjectionMatrix,
+        {
+          x: 0,
+          y: 0,
+          w: EYE_WIDTH,
+          h: EYE_HEIGHT
+        });
+      renderer.clearDepth();
 
-    // Right eye.
-    camera.position.copy(rightEye);
-    _renderEye(
-      frameData.rightViewMatrix,
-      frameData.rightProjectionMatrix, {
-        x: EYE_WIDTH,
-        y: 0,
-        w: EYE_WIDTH,
-        h: EYE_HEIGHT
-      });
-    renderer.clearDepth();
+      // Right eye.
+      camera.position.copy(rightEye);
+      _renderEye(
+        frameData.rightViewMatrix,
+        frameData.rightProjectionMatrix, {
+          x: EYE_WIDTH,
+          y: 0,
+          w: EYE_WIDTH,
+          h: EYE_HEIGHT
+        });
+      renderer.clearDepth();
 
-    activeDisplay.submitFrame();
-  } else {
-    console.log('no frame data or pose');
-    console.dir(activeDisplay);
-    console.dir(frameData);
-    console.dir(pose);
+      activeDisplay.submitFrame();
+    } else {
+      console.log('no frame data or pose');
+      console.dir(activeDisplay);
+      console.dir(frameData);
+      console.dir(pose);
+    }
   }
   activeDisplay.requestAnimationFrame(animate);
 }
