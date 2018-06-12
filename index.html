@@ -240,56 +240,61 @@ THREE.PhysicalMesh = PhysicalMesh;
         return audio;
 	  }
 
-      const lineText = new THREE.Object3D();
+      let text;
+
 	  function makeText(message) {
 	    const fontLoader = new THREE.FontLoader();
 
-        fontLoader.load( './Beon.typeface.json', function ( font ) {
-          let xMid, text;
+        fontLoader.load('./Beon.typeface.json', function (font) {
+          let xMid;
           const textShape = new THREE.BufferGeometry();
           const color = 0x006699;
-          const matDark = new THREE.LineBasicMaterial({
-            color: color,
-            side: THREE.DoubleSide
-          });
           const matLite = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
             opacity: 0.4,
             side: THREE.DoubleSide
           });
-          const shapes = font.generateShapes(message, 40, 2);
+          const shapes = font.generateShapes(message, 0.02, 2);
           const shapeGeometry = new THREE.ShapeGeometry(shapes);
           shapeGeometry.computeBoundingBox();
           xMid = - 0.5 * (shapeGeometry.boundingBox.max.x - shapeGeometry.boundingBox.min.x);
-          shapeGeometry.translate(xMid, 0, 0);
+          shapeGeometry.translate(xMid - 0.3, 0.1, 0);
           textShape.fromGeometry(shapeGeometry);
           text = new THREE.Mesh(textShape, matLite);
-          text.position.z = - 150;
+          text.position.z = 0.7;
           scene.add(text);
-          // make line shape ( N.B. edge view remains visible )
-          const holeShapes = [];
-          for (let i = 0; i < shapes.length; i ++) {
-            const shape = shapes[i];
-            if (shape.holes && shape.holes.length > 0) {
-              for (let j = 0; j < shape.holes.length; j ++) {
-                const hole = shape.holes[j];
-                holeShapes.push(hole);
-              }
-            }
-          }
-          shapes.push.apply(shapes, holeShapes);
-          for (let i = 0; i < shapes.length; i ++) {
-            const shape = shapes[i];
-            const points = shape.getPoints();
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        });
+	  }
 
-            geometry.translate(xMid, 0, 0);
-            const lineMesh = new THREE.Line(geometry, matDark);
-            lineText.add(lineMesh);
+	  let scoreText;
+
+	  function makeScoreText(scoreString) {
+        const fontLoader = new THREE.FontLoader();
+
+        fontLoader.load('./Beon.typeface.json', function (font) {
+          let xMid;
+          const textShape = new THREE.BufferGeometry();
+          const color = 0x006699;
+          const matLite = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide
+          });
+          const shapes = font.generateShapes(scoreString, 0.04, 2);
+          const shapeGeometry = new THREE.ShapeGeometry(shapes);
+          shapeGeometry.computeBoundingBox();
+          xMid = - 0.5 * (shapeGeometry.boundingBox.max.x - shapeGeometry.boundingBox.min.x);
+          shapeGeometry.translate(xMid - 0.3, 0.05, 0);
+          textShape.fromGeometry(shapeGeometry);
+          if (scoreText) {
+            scene.remove(scoreText);
           }
-          scene.add(lineText);
-        } );
+          scoreText = new THREE.Mesh(textShape, matLite);
+          scoreText.position.z = 0.7;
+          scene.add(scoreText);
+        });
 	  }
 
       const noteMeshLoader = new THREE.OBJLoader();
@@ -334,7 +339,8 @@ THREE.PhysicalMesh = PhysicalMesh;
           const notesGroup = buildNotes(redNote, blueNote, songData.difficultyLevels[0].song._notes);
           const audioEl = makeSong('./Believer/song.ogg');
 
-		  makeText('Leetsaber');
+		  makeText('COMBO');
+		  makeScoreText('0');
 
           audioEl.play();
         } else {
@@ -1258,6 +1264,14 @@ const _activate = e => {
   }
 }
       window.addEventListener('keypress', _activate);
+
+	  let score = 0;
+	  document.addEventListener('keydown', (evt) => {
+	    if (evt.which === 32) {
+	      score += 1;
+	      makeScoreText(score.toString());
+		}
+	  });
       //setTimeout(_activate, 1000);
 		</script>
 
