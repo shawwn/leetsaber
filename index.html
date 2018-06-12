@@ -240,8 +240,9 @@ THREE.PhysicalMesh = PhysicalMesh;
         return audio;
 	  }
 
-	  function makeText() {
-        const fontLoader = new THREE.FontLoader();
+      const lineText = new THREE.Object3D();
+	  function makeText(message) {
+	    const fontLoader = new THREE.FontLoader();
 
         fontLoader.load( './Beon.typeface.json', function ( font ) {
           let xMid, text;
@@ -257,7 +258,6 @@ THREE.PhysicalMesh = PhysicalMesh;
             opacity: 0.4,
             side: THREE.DoubleSide
           });
-          const message = "Leetsaber";
           const shapes = font.generateShapes(message, 40, 2);
           const shapeGeometry = new THREE.ShapeGeometry(shapes);
           shapeGeometry.computeBoundingBox();
@@ -279,7 +279,6 @@ THREE.PhysicalMesh = PhysicalMesh;
             }
           }
           shapes.push.apply(shapes, holeShapes);
-          const lineText = new THREE.Object3D();
           for (let i = 0; i < shapes.length; i ++) {
             const shape = shapes[i];
             const points = shape.getPoints();
@@ -335,7 +334,7 @@ THREE.PhysicalMesh = PhysicalMesh;
           const notesGroup = buildNotes(redNote, blueNote, songData.difficultyLevels[0].song._notes);
           const audioEl = makeSong('./Believer/song.ogg');
 
-		  makeText();
+		  makeText('Leetsaber');
 
           audioEl.play();
         } else {
